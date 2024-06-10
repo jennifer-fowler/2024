@@ -1,0 +1,430 @@
+---
+title: "ASRI - Population Health"
+author: "Jennifer Fowler"
+date: '2024-06-04'
+output: powerpoint_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## R Markdown
+
+This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+*INSTALLING & LOADING PACKAGES*
+
+You only have to install packages once, but you have to load them for each project or script file that you create. It's better to run the installation commands directly in your console or using the Tools menu, because you don't need to reproduce that. You DO need to reproduce loading your libraries, so it's better to include those commands in the very beginning of your script file.
+
+To install a package, run this command in the console:
+install.packages("packagename")
+
+NOTE: Some packages require an input during installation to proceed. Your console may show a prompt asking if you want to install packages that need compilation (Yes/No/Cancel). You can type Y or Yes on that line in the console and hit enter to continue with the installation.
+
+To load packages, use the following command in your script:
+library(packagename) 
+
+OR
+
+suppressPackageStartupMessages(library(packagename)
+
+Troubleshooting:
+Look in the Packages tab of the bottom right pane.
+Is the package you're stuck on listed in the long list of installed packages?
+Is the box next to it checked?
+You may need to use the install command again to update packages. 
+
+```{r}
+#load libraries
+
+suppressPackageStartupMessages(library(readr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(plotly))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ISLR))
+suppressPackageStartupMessages(library(viridis))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(ggridges))
+suppressPackageStartupMessages(library(lubridate))
+suppressPackageStartupMessages(library(tibble))
+```
+
+*IMPORTING DATASETS*
+
+BEFORE YOU IMPORT: Make sure the file path in quotation marks below matches the file's location on YOUR computer.
+
+Troubleshooting- 
+Are the slashes facing the correct direction? // 
+Is your file path green or different color text than the rest of the command?
+Are your logical arguments spelled TRUE and capitalized?
+Do you have an actual file specified?
+
+
+```{r}
+# import datasets 
+SDOH = read.csv("/Users/jennifershelton/Downloads/Population Health/SDOH_ACS_2021.csv",
+                header = TRUE, stringsAsFactors = TRUE)
+
+
+```
+
+*EXPLORATORY DATA ANALYSIS*
+
+Typical first steps once you import data is to get a look at it. Use the Environment pane for your initial glance - how big is the data set? How many rows (observations) and columns (features)?
+
+With numerical data, you can perform summary statistics like mean(), median(), range(), mode().
+
+Visualizations are also a good way to learn more about your data and refine your hypothesis and experimental approach.
+
+```{r}
+# explore dataset structure
+str(SDOH)
+
+# summary stats of numeric features
+
+print("Total Population Median:")
+median(SDOH$TotalPopulation)
+
+print("Total Population Mean:")
+mean(SDOH$TotalPopulation)
+```
+
+
+
+
+```{r}
+# simple visualizations for exploration of SDOH data
+ggplot(data = SDOH, aes(x = StateAbbr, y = TotalPopulation)) +
+# simple column chart for discrete / cumulative data
+  geom_col() +
+# add custom plot title and axis labels
+  labs(title = "Total Population by State", x = "State", y = "Total Population") +
+#adjust the main title to be in the center of the plot  
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+Let's wrangle the SDOH data into something more useful and simple, for easier analysis.
+
+Steps:
+1. Make a new dataframe with only the columns StateAbbr, Location Name, Measure, Data_Value, TotalPopulation, and Geolocation.
+3. Filter out the US cumulative observations.
+4. Generate another plot of Total Population by State.
+
+```{r}
+# data wrangling the SDOH data - step 1
+
+# create a new empty dataframe to copy columns into
+SD = data.frame(matrix(ncol = 0, nrow = 28287))
+
+# create column labels in the new df and copy over columns from original df
+# typical syntax is like this -
+# NewDF$NewColumn = OldDF$OldColumn
+
+SD$State = SDOH$StateAbbr
+SD$Location = SDOH$LocationName
+SD$Measure = SDOH$Measure
+SD$Value = SDOH$Data_Value
+SD$Population = SDOH$TotalPopulation
+SD$Geolocation = SDOH$Geolocation
+```
+
+
+```{r}
+# data wrangling the SDOH data - step 2
+
+# filtering out the US cumulative observations
+SD = SD[!(SD$State %in% "US"),]
+
+```
+
+
+```{r}
+# data wrangling the SDOH data - step 3 plot the data again
+# incorporating some color and aesthetic changes
+
+# using this line in your script will override the default scientific notation
+options(scipen = 999)
+
+# update the df name and variable names to your new df
+ggplot(data = SD, aes(x = State, y = Population)) +
+  geom_col(fill = 'seagreen') +
+  labs(title = "Total Population by State", x = "State", y = "Total Population") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+# this next line will format the y axis tick labels with commas
+  scale_y_continuous(labels = scales::comma)
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+
+
+
+
+
+
+Let's take a look at the provisional cancer deaths dataset. 
+
+```{r}
+cancer = read.csv("/Users/jennifershelton/Downloads/Population Health/cancerdeaths2020-2021.csv",
+                header = TRUE, stringsAsFactors = TRUE)
+```
+
+Some of the column names are super long, we can rename them to make coding easier.
+
+```{r}
+# get the list of columns using the str() structure function
+str(cancer)
+```
+
+I think we can drop the Country column since this data is all from the U.S. Then we can rename the 'Malignant.neoplasms.' columns to shorter names. 
+
+```{r}
+# drop junk columns
+# drop column index number 1 for Data.As.Of
+cancer = cancer[ , -1]
+```
+
+```{r}
+# drop column for country
+cancer = cancer[ , -3]
+```
+
+
+
+```{r}
+# renaming columns for easier work
+
+# syntax for renaming columns is rename(data, 'new name' = 'old name')
+# or data %>% rename('new name' = 'old name')
+
+cancer = cancer %>%
+  rename('AllTypes' = 'Malignant.neoplasms..C00.C97.',
+         'Bladder' = 
+           'Malignant.neoplasm.of.bladder..C67.',
+         'Stomach' = 
+           'Malignant.neoplasm.of.stomach..C16.',
+         'Liver' =
+           'Malignant.neoplasms.of.liver.and.intrahepatic.bile.ducts..C22.',
+         'Ovary' = 
+           'Malignant.neoplasm.of.ovary..C56.',
+         'LymphHematopoietic' = 
+           'Malignant.neoplasms.of.lymphoid..hematopoietic.and.related.tissue..C81.C96.',
+         'Kidney' = 
+           'Malignant.neoplasms.of.kidney.and.renal.pelvis..C64.C65.',
+         'Larynx' = 
+           'Malignant.neoplasm.of.larynx..C32.',
+         'Breast' =
+           'Malignant.neoplasm.of.breast..C50.',
+         'Cervix' =
+           'Malignant.neoplasm.of.cervix.uteri..C53.',
+         'Uterus' =
+           'Malignant.neoplasms.of.corpus.uteri.and.uterus..part.unspecified..C54.C55.',
+         'Prostate' = 
+           'Malignant.neoplasm.of.prostate..C61.',
+         'Mouth' =
+           'Malignant.neoplasms.of.lip..oral.cavity.and.pharynx..C00.C14.',
+         'Esophagus' =
+           'Malignant.neoplasm.of.esophagus..C15.',
+         'Brain' =
+           'Malignant.neoplasms.of.meninges..brain.and.other.parts.of.central.nervous.system..C70.C72.',
+         'Pancreas' =
+           'Malignant.neoplasm.of.pancreas..C25.',
+         'Colon' =
+           'Malignant.neoplasms.of.colon..rectum.and.anus..C18.C21.',
+         'Lung' =
+           'Malignant.neoplasms.of.trachea..bronchus.and.lung..C33.C34.',
+         'Skin' = 
+           'Malignant.melanoma.of.skin..C43.',
+         'Unspecified' = 'All.other.and.unspecified.malignant.neoplasms..C17.C23.C24.C26.C31.C37.C41.C44.C49.C51.C52.C57.C60.C62.C63.C66.C68.C69.C73.C80.C97.'
+         )
+```
+
+
+```{r}
+print("All Types range: ")
+range(cancer$AllTypes)
+
+print("Colon range: ")
+range(cancer$Colon)
+
+print("Mouth range: ")
+range(cancer$Mouth)
+
+print("Liver range: ")
+range(cancer$Liver)
+
+print("Skin range: ")
+range(cancer$Skin)
+```
+
+
+```{r}
+# ridgeline plot with ggridges to visualize distribution of cancer deaths
+# y-value will be age group, x-value will be All types
+
+ggplot(cancer, aes(x = AllTypes, y = Race.and.Hispanic.Origin, fill = Race.and.Hispanic.Origin)) +
+  geom_density_ridges() +
+  theme_ridges() +
+  theme(legend.position = "none")
+
+```
+
+
+```{r}
+# ridgeline plot with ggridges to visualize distribution of cancer deaths
+# y-value will be age group, x-value will be Mouth Cancer
+
+ggplot(cancer, aes(x = Mouth, y = Race.and.Hispanic.Origin, 
+                   fill = Race.and.Hispanic.Origin)) +
+  geom_density_ridges() +
+  theme_ridges() +
+  theme(legend.position = "none")
+
+```
+
+```{r}
+#converting the Start Date and End Date columns to date format for time series analysis
+# using mdy syntax
+cancer$End.Date = mdy(cancer$End.Date)
+cancer$Start.Date = mdy(cancer$Start.Date)
+```
+
+
+
+```{r}
+# exploring time series- changes in AllTypes cancer death counts over time
+# using End.Date
+
+ggplot(cancer, aes(x = End.Date, y = AllTypes)) +
+  geom_line() +
+  geom_point()
+```
+
+This plot looks wild. The issue with this for a time series is that there are multiple observations for each time period, stratified by the demographic characteristics. 
+To resolve this, we have two choices: make a table that sums all of the death counts for each month, OR select one or a few demographics to compare. Let's try it both ways.
+
+```{r}
+# total of cancer deaths by month
+totals = aggregate(cancer$AllTypes, by = list(Category = cancer$End.Date), FUN = sum)
+```
+
+```{r}
+# sum of deaths from each cancer type
+# dataframe[,c(column_indexes)]
+
+types = cancer[,c(9:27)]
+alldeaths = colSums(types)
+alldeaths = as.data.frame(alldeaths)
+alldeaths = rownames_to_column(alldeaths, var = "rowname")
+```
+
+
+
+```{r}
+# regression to test correlation of cancer deaths with sex
+# using sex as a binary feature
+# need to convert male to 0 and female to 1
+
+# make a new column to copy the Sex info and preserve the original column
+cancer$S2 = cancer$Sex
+
+# recode the data in the new column to binary 
+cancer = mutate(cancer, S2 = 
+                recode(S2, 
+                       "Female (F)" = "1",
+                       "Male (M)" = '0'))
+
+# convert to numeric format for regression
+cancer$S2 = as.numeric(cancer$S2)
+```
+
+
+```{r}
+# perform a linear regression to test correlation of cancer deaths with sex
+cancerlm = lm(cancer$S2~cancer$AllTypes)
+summary(cancerlm)
+```
+
+
+The results are not very good- the two things are not correlated. I'm curious to see if the Males and Females are evenly represented in the dataset. Let's aggregate to check.
+
+
+```{r}
+# total of mouth cancer deaths by sex
+sex = aggregate(cancer$AllTypes, by = list(Category = cancer$Sex), FUN = sum)
+```
+
+Yes, there are almost the same number of male and female cancer deaths. Maybe we can see if there is any correlation between cancer deaths and the month of the year.
+
+```{r}
+# perform a linear regression to test correlation of cancer deaths with sex
+cancerlm2 = lm(cancer$Month~cancer$AllTypes)
+summary(cancerlm2)
+```
+
+There is not a correlation. Remember that these ARE results! Just because the results are not what we expected doesn't mean you can't use them.
+
+```{r}
+# exploring time series- changes in AllTypes cancer death counts over time
+# using End.Date
+
+ggplot(totals, aes(x = Category, y = x)) +
+  geom_line() +
+  geom_point()
+```
+
+
+```{r}
+# import subset from healthy aging data
+
+cognitive = read.csv("/Users/jennifershelton/Downloads/Population Health/cognitive.csv",
+                header = TRUE, stringsAsFactors = TRUE)
+
+```
+
+
+```{r}
+# sort the alldeaths list to see which types of cancer are more fatal
+alldeaths = alldeaths[order(alldeaths$alldeaths, decreasing = TRUE),]
+```
+
+The type of cancer with the most reported deaths is lung cancer.
+
+```{r}
+# remove observations with missing data in Stratification 2 
+cog2 = na.omit(cognitive)
+is.na(cog2)
+```
+
+```{r}
+# get a better sense of distribution of data
+# fishes = fish %>% count(CommonName, .drop = FALSE)
+
+cog3 = cog2 %>% count(Stratification2, .drop = FALSE)
+cog4 = cog2 %>% count(Stratification1, .drop = FALSE)
+```
+
+```{r}
+# subset the data for 65+ age group '65 years or older'   
+# example -subfish = fish[(fish$CommonName %in% fishlist),]
+
+age65 = cog2[(cog2$Stratification1 %in% '65 years or older'),]
+ages = list('75 years and over','65-74 years')
+cancer65 = cancer[(cancer$Age.Group %in% ages),]
+
+```
+
